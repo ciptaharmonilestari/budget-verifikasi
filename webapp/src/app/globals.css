@@ -1,0 +1,481 @@
+/* Kendali Biaya Terpadu — design tokens.
+ * Ported from the real applied :root block in the prototype (dc.html lines
+ * 15-23). NOTE: the prototype's own "Fondasi Desain" self-documentation page
+ * lists different hex values for these same token names (drifted from an
+ * earlier palette iteration) — this file matches what was actually applied,
+ * not that stale reference table. See final report for the discrepancy.
+ */
+
+:root {
+  --ground: #f6f1e7;
+  --surface: #ffffff;
+  --s2: #f1ece1;
+  --s3: #e6dfd1;
+
+  --ink: #0d0d0d;
+  --ink-2: #242424;
+  --ink-3: #3d3d3d;
+  --line: #e3dccc;
+  --line-2: #cdc4b2;
+
+  --gold: #b58a3a;
+  --gold-ink: #8a6828;
+  --gold-soft: #fbf3e2;
+  --rule: #1f2933;
+
+  --accent: #8a6828;
+  --accent-2: #6b4f1c;
+  --accent-soft: #f7eedc;
+
+  --ok: #3f6b45;
+  --ok-soft: #edf3ea;
+  --ok-line: #bbd0b7;
+
+  --warn: #9a6700;
+  --warn-soft: #fff6e0;
+  --warn-line: #ebcf92;
+
+  --bad: #b42318;
+  --bad-soft: #fdecec;
+  --bad-line: #f0bdb8;
+
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-pill: 100px;
+
+  --shadow-card: 0 1px 2px rgba(31, 41, 51, 0.05), 0 8px 24px rgba(31, 41, 51, 0.05);
+  --shadow-pop: 0 18px 48px rgba(31, 41, 51, 0.24);
+  --shadow-bar: 0 -8px 22px rgba(31, 41, 51, 0.08);
+
+  --font-ui: var(--font-sans), "Segoe UI", sans-serif;
+  --font-num: var(--font-mono), ui-monospace, monospace;
+
+  --bp-tablet: 1180px;
+  --bp-search: 1024px;
+  --bp-mobile: 900px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Status tag pill                                                        */
+/* ---------------------------------------------------------------------- */
+
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.tag-PASS { background: var(--ok-soft); border-color: var(--ok-line); color: var(--ok); }
+.tag-WARN { background: var(--warn-soft); border-color: var(--warn-line); color: var(--warn); }
+.tag-FAIL { background: var(--bad-soft); border-color: var(--bad-line); color: var(--bad); }
+.tag-INFO { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-2); }
+.tag-NA { background: var(--s2); border-color: var(--line-2); color: var(--ink-3); }
+
+/* ---------------------------------------------------------------------- */
+/* Buttons                                                                 */
+/* ---------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  min-height: 38px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover { background: var(--s2); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+
+.btn-danger { border-color: var(--bad-line); color: var(--bad); background: var(--bad-soft); }
+.btn-ghost { border-color: transparent; background: transparent; }
+.btn-sm { min-height: 30px; padding: 5px 12px; font-size: 13px; }
+
+@media (max-width: 900px) {
+  .btn { min-height: 44px; }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Cards / panels                                                          */
+/* ---------------------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+}
+
+.field-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  color: var(--ink);
+}
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* App shell — sidebar / header / content                                 */
+/* Layout comes entirely from @media queries; JS state only tracks drawer */
+/* open/closed and the desktop rail preference. Never mirror viewport     */
+/* width into React state (see CLAUDE.md decision log).                  */
+/* ---------------------------------------------------------------------- */
+
+.shell {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  min-height: 100vh;
+}
+.shell.railCollapsed {
+  grid-template-columns: 64px 1fr;
+}
+.shell.railCollapsed .sidebar .navText,
+.shell.railCollapsed .sidebar .navSubtitle,
+.shell.railCollapsed .sidebar .sessionBlock {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  .shell,
+  .shell.railCollapsed {
+    grid-template-columns: 64px 1fr;
+  }
+  .sidebar .navText,
+  .sidebar .navSubtitle,
+  .sidebar .sessionBlock {
+    display: none;
+  }
+  .menuBtn {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .shell,
+  .shell.railCollapsed {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: fixed;
+    z-index: 60;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(84vw, 288px);
+    transform: translateX(-102%);
+    transition: transform 0.22s ease;
+    box-shadow: var(--shadow-pop);
+  }
+  .sidebar.navOpen {
+    transform: translateX(0);
+  }
+  .sidebar .navText,
+  .sidebar .navSubtitle,
+  .sidebar .sessionBlock {
+    display: block;
+  }
+  .menuBtn {
+    display: inline-flex;
+  }
+  .scrim {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 13, 13, 0.44);
+    z-index: 55;
+  }
+  .scrim.on {
+    display: block;
+  }
+  .hideNarrow {
+    display: none !important;
+  }
+  .onlyNarrow {
+    display: flex !important;
+  }
+  .grid2,
+  .grid3 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .colExtra {
+    display: none !important;
+  }
+  .mobileBar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    box-shadow: var(--shadow-bar);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+}
+
+.onlyNarrow {
+  display: none;
+}
+
+.scrim {
+  display: none;
+}
+
+/* Table-row-specific responsive visibility (tr can't use display:flex like
+ * .onlyNarrow/.hideNarrow do for regular elements — that would break table
+ * layout), used e.g. by the Settings parameter table's dual desktop/mobile rows. */
+.rowMobile {
+  display: none;
+}
+@media (max-width: 900px) {
+  .rowDesktop {
+    display: none;
+  }
+  .rowMobile {
+    display: table-row;
+  }
+}
+
+@media (max-width: 900px) {
+  .loginGrid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.sidebar {
+  background: var(--ink);
+  color: #f4efe3;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+  gap: 4px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  color: #d9d2c2;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.navItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.navItem.active {
+  background: var(--gold-ink);
+  color: #fff;
+}
+.navItem svg {
+  flex: none;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+@media (max-width: 1024px) {
+  .headerSearch {
+    display: none;
+  }
+}
+
+.main {
+  padding: 24px;
+  max-width: 1400px;
+  width: 100%;
+}
+@media (max-width: 900px) {
+  .main {
+    padding: 16px;
+    padding-bottom: 96px;
+  }
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Data table with mobile core-column collapsing                          */
+/* ---------------------------------------------------------------------- */
+
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.tbl th,
+.tbl td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+.tbl thead th {
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  background: var(--s2);
+}
+.tbl tbody tr:hover {
+  background: var(--gold-soft);
+}
+
+@media (max-width: 900px) {
+  .tbl {
+    min-width: 0;
+  }
+  .tbl [data-extra] {
+    display: none;
+  }
+  .tbl th,
+  .tbl td {
+    padding: 10px 8px;
+    white-space: normal;
+  }
+  .tbl tbody tr[data-tappable] {
+    cursor: pointer;
+  }
+  .tbl tbody tr[data-tappable]:active {
+    background: var(--s3);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Slide-over panel (history, parameter detail)                            */
+/* ---------------------------------------------------------------------- */
+
+.slideOverScrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 13, 13, 0.3);
+  z-index: 70;
+}
+.slideOver {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(90vw, 440px);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  z-index: 71;
+  display: flex;
+  flex-direction: column;
+}
+.slideOverHead {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.slideOverBody {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}

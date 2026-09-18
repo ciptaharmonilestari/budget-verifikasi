@@ -1,0 +1,268 @@
+/* Print documents — letterhead, QR/stamp, signature block, A4 pagination.
+ * True black/white/gray palette on purpose (documents print in ink, not the
+ * app's cream/gold screen palette). */
+
+.om-root {
+  --ink1: #1b1b1b;
+  --hair1: #9a9a9a;
+  --hair2: #5a5a5a;
+  --shade1: #efefef;
+  --shade2: #f7f7f7;
+  background: #6b6b6b;
+  min-height: 100vh;
+  padding: 24px 0 80px;
+}
+
+.om-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  padding: 12px;
+  background: #2a2a2a;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.om-toolbar span {
+  color: #ccc;
+  font-size: 12.5px;
+  margin-right: 4px;
+}
+
+.om-sheet {
+  background: #fff;
+  color: var(--ink1);
+  width: 820px;
+  max-width: 94vw;
+  margin: 0 auto 24px;
+  padding: 46px 52px 54px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  position: relative;
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.om-sheet.om-wide {
+  width: 1180px;
+}
+
+.om-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.om-head-left {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex: 1 1 auto;
+}
+.om-wordmark {
+  height: auto;
+  display: block;
+}
+.om-pt-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+.om-pt-addr {
+  font-size: 11.5px;
+  color: var(--hair2);
+  margin-top: 2px;
+  max-width: 320px;
+}
+.om-anggaran-box {
+  border: 1px solid var(--ink1);
+  padding: 8px 10px;
+  font-size: 11px;
+  min-width: 180px;
+}
+.om-anggaran-box .om-box-title {
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.om-rule-thick {
+  border: none;
+  border-top: 3px solid var(--ink1);
+  margin: 10px 0 2px;
+}
+.om-rule-thin {
+  border: none;
+  border-top: 1px solid var(--ink1);
+  margin: 0 0 14px;
+}
+
+.om-doctitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.om-doctitle h1 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.om-docno {
+  font-family: var(--font-num);
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+.om-qr {
+  flex: none;
+}
+
+.om-field-grid {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  row-gap: 4px;
+  font-size: 12.5px;
+  margin-bottom: 14px;
+}
+
+.om-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.om-table th,
+.om-table td {
+  border: 1px solid var(--hair1);
+  padding: 5px 7px;
+  text-align: left;
+}
+.om-table thead th {
+  background: var(--shade1);
+  font-weight: 700;
+}
+.om-table tfoot td {
+  background: var(--shade2);
+  font-weight: 700;
+}
+
+.om-signblock {
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.om-signblock.om-wrap2 {
+  flex-wrap: wrap;
+}
+.om-signblock.om-wrap2 .om-signcol {
+  flex-basis: calc(33.33% - 8px);
+}
+.om-signcol {
+  text-align: center;
+  font-size: 11.5px;
+  break-inside: avoid;
+}
+.om-signcol .om-signrole {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10.5px;
+}
+.om-signcol .om-signspace {
+  height: 56px;
+}
+.om-signcol .om-signname {
+  border-top: 1px solid var(--ink1);
+  padding-top: 3px;
+  font-weight: 700;
+}
+.om-signcol .om-signjabatan {
+  color: var(--hair2);
+}
+
+.om-stamp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-24deg);
+  font-size: clamp(48px, 10vw, 100px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border: 6px solid currentColor;
+  padding: 4px 24px;
+  opacity: 0.13;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.om-foot {
+  margin-top: 18px;
+  font-size: 10.5px;
+  color: var(--hair2);
+  text-align: right;
+}
+
+@media print {
+  body.om-printing * {
+    visibility: hidden;
+  }
+  body.om-printing .om-print-area,
+  body.om-printing .om-print-area * {
+    visibility: visible;
+  }
+  body.om-printing .om-toolbar {
+    display: none !important;
+  }
+  body.om-printing .om-root {
+    background: none;
+    padding: 0;
+  }
+  body.om-printing .om-sheet {
+    box-shadow: none;
+    margin: 0 auto;
+    width: 178mm;
+  }
+  body.om-printing .om-sheet.om-wide {
+    width: auto;
+  }
+  body.om-printing .om-stamp {
+    opacity: 0.11;
+  }
+  @page {
+    size: A4;
+    margin: 14mm 16mm;
+  }
+  @page wide {
+    size: A4 landscape;
+    margin: 10mm 12mm;
+  }
+  .om-wide {
+    page: wide;
+  }
+  .om-page {
+    width: 178mm;
+    min-height: 265mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    page-break-after: always;
+  }
+  .om-page:last-child {
+    page-break-after: auto;
+  }
+  .om-table thead {
+    display: table-header-group;
+  }
+  .om-table tfoot {
+    display: table-footer-group;
+  }
+  .om-table tr,
+  .om-signblock {
+    break-inside: avoid;
+  }
+}

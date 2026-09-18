@@ -1,0 +1,608 @@
+// Kendali Biaya Terpadu (KBT) — data model
+// Source of truth: project/prd.md + code analysis of project/Kendali Biaya Terpadu.dc.html
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users, roles, departments, PT/project structure
+// ---------------------------------------------------------------------------
+
+enum Role {
+  OWNER
+  HEAD_BUDGET
+  VERIFIKATOR_BUDGET
+  ADMIN_BUDGET
+  DIV_PAJAK
+  PENGAJU
+  HEAD_DEPARTEMEN
+  CEO_PROJECT
+  CFO
+  CEO1
+}
+
+enum Panel {
+  BUDGET
+  PENGAJU
+  APPROVER
+}
+
+model User {
+  id               String    @id @default(cuid())
+  username         String    @unique
+  name             String
+  passwordHash     String
+  role             Role
+  departmentId     String?
+  active           Boolean   @default(true)
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  department Department? @relation(fields: [departmentId], references: [id])
+
+  submissionsCreated        Submission[]        @relation("SubmissionCreatedBy")
+  gateDecisions             GateDecision[]      @relation("GateDecisionActor")
+  laneClearances            LaneClearance[]     @relation("LaneClearanceActor")
+  parameterProposalsMade    ParameterProposal[] @relation("ProposalBy")
+  parameterProposalsDecided ParameterProposal[] @relation("ProposalDecidedBy")
+  parameterHistoryEntries   ParameterHistory[]  @relation("HistoryBy")
+  notifications             Notification[]      @relation("NotificationTo")
+  activityLogEntries        ActivityLog[]       @relation("ActivityLogUser")
+  allocationMoves           AllocationMoveLog[] @relation("AllocationMoveBy")
+  emailApprovalDecisions    EmailApprovalLink[] @relation("EmailApprovalDecidedBy")
+
+  @@index([role])
+  @@index([departmentId])
+}
+
+model Department {
+  id       String  @id @default(cuid())
+  code     String  @unique
+  name     String
+  roleNote String?
+  active   Boolean @default(true)
+
+  users       User[]
+  submissions Submission[]
+}
+
+model Company {
+  id     String  @id @default(cuid())
+  code   String  @unique
+  name   String
+  locked Boolean @default(false)
+
+  projects    Project[]
+  allocations BudgetAllocation[]
+  submissions Submission[]
+  contracts   Contract[]
+}
+
+model Project {
+  id              String @id @default(cuid())
+  companyId       String
+  name            String
+  currentSequence Int    @default(100000)
+
+  company     Company            @relation(fields: [companyId], references: [id])
+  allocations BudgetAllocation[]
+  submissions Submission[]
+  contracts   Contract[]
+
+  @@unique([companyId, name])
+}
+
+// ---------------------------------------------------------------------------
+// Budget allocation & ledger (Master Alokasi Budget / Posisi Anggaran)
+// ---------------------------------------------------------------------------
+
+model BudgetAllocation {
+  id        String  @id @default(cuid())
+  allocNo   String  @unique
+  companyId String
+  projectId String
+  costCode  String
+  name      String
+  pagu      Decimal @db.Decimal(18, 2)
+
+  company Company @relation(fields: [companyId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+
+  submissions  Submission[]
+  moveLogsFrom AllocationMoveLog[] @relation("MoveFrom")
+  moveLogsTo   AllocationMoveLog[] @relation("MoveTo")
+
+  @@index([companyId, projectId])
+  @@index([costCode])
+}
+
+model AllocationMoveLog {
+  id           String   @id @default(cuid())
+  fromAllocId  String
+  toAllocId    String
+  submissionId String?
+  amount       Decimal  @db.Decimal(18, 2)
+  reason       String
+  byId         String
+  at           DateTime @default(now())
+
+  from       BudgetAllocation @relation("MoveFrom", fields: [fromAllocId], references: [id])
+  to         BudgetAllocation @relation("MoveTo", fields: [toAllocId], references: [id])
+  submission Submission?      @relation(fields: [submissionId], references: [id])
+  by         User             @relation("AllocationMoveBy", fields: [byId], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// Vendors
+// ---------------------------------------------------------------------------
+
+enum PkpStatus {
+  PKP
+  NON_PKP
+}
+
+model Vendor {
+  id           String    @id @default(cuid())
+  name         String
+  npwp         String?
+  pkpStatus    PkpStatus @default(NON_PKP)
+  bank         String?
+  rekening     String?
+  alamat       String?
+  tipeSupplier String?
+
+  contracts   Contract[]
+  submissions Submission[]
+}
+
+// ---------------------------------------------------------------------------
+// Submissions ("Berkas") — the central workflow entity
+// ---------------------------------------------------------------------------
+
+enum FormKind {
+  PNJ // IOM Penunjukan (SPK/LOA/Adendum)
+  BAYAR // IOM Payment (BAPP)
+  BIAYA // IOM Pengajuan Biaya
+  PTG // Pertanggungjawaban
+  DPH // Pengajuan DPH
+  PO // Pengajuan PO
+  FIN // IOM Finance (Payment Voucher)
+}
+
+enum DocType {
+  DOC01 // SPK / PNJ
+  DOC02 // LOA
+  DOC03 // Advance / Reimbursement / PTG / PO
+  DOC04 // Payment / BAPP
+  DOC05 // Adendum
+}
+
+enum SubmissionStatus {
+  DRAFT
+  DEPT_APPROVAL
+  GATE1_KELENGKAPAN
+  RETURNED
+  GATE2_PARALLEL
+  GATE3_BUDGET_REVIEW
+  TREASURY_CHECK
+  GATE4_CEO_PROJECT
+  GATE5_CFO
+  GATE6_CEO1
+  APPROVED
+  REJECTED
+  PAID
+  VOID
+}
+
+enum TagLevel {
+  PASS
+  WARN
+  FAIL
+  INFO
+  NA
+}
+
+model Submission {
+  id            String           @id @default(cuid())
+  indexNo       String           @unique // NNN/PT-PROYEK-DEPT/BULAN-ROMAWI/TAHUN
+  kind          FormKind
+  docType       DocType
+  subject       String
+  companyId     String
+  projectId     String
+  departmentId  String
+  costCode      String
+  allocationId  String?
+  value         Decimal          @db.Decimal(18, 2)
+  status        SubmissionStatus @default(DRAFT)
+  currentGate   Int              @default(1)
+  routeGate     Int              @default(4) // 4 = CEO Project, 5 = CFO, 6 = CEO 1
+  revisionCount Int              @default(0)
+  returnCycles  Int              @default(0)
+  tagLevel      TagLevel         @default(INFO)
+
+  vendorId        String?
+  taxTxTypeCode   String?
+  taxProposedRate Decimal?  @db.Decimal(6, 3)
+  taxVerifiedAt   DateTime?
+  taxVerifiedById String?
+
+  formData          Json @default("{}") // kind-specific fields (see lib/forms/*.ts schemas)
+  documentChecklist Json @default("[]") // [{code,label,required,fulfilled}]
+  memo              Json @default("{}") // naskah: kepada/dari/tanggal/perihal/isi/...
+
+  createdById String
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  company    Company           @relation(fields: [companyId], references: [id])
+  project    Project           @relation(fields: [projectId], references: [id])
+  department Department        @relation(fields: [departmentId], references: [id])
+  allocation BudgetAllocation? @relation(fields: [allocationId], references: [id])
+  vendor     Vendor?           @relation(fields: [vendorId], references: [id])
+  createdBy  User              @relation("SubmissionCreatedBy", fields: [createdById], references: [id])
+
+  gateDecisions      GateDecision[]
+  laneClearances     LaneClearance[]
+  signatureColumns   SignatureColumn[]
+  notifications      Notification[]
+  activityLogs       ActivityLog[]
+  allocationMoves    AllocationMoveLog[]
+  emailApprovalLinks EmailApprovalLink[]
+  payments           Payment[]
+  contract           Contract?           @relation(fields: [contractId], references: [id])
+  contractId         String?
+
+  @@index([status])
+  @@index([companyId, projectId])
+  @@index([createdById])
+}
+
+enum GateVerdict {
+  CLEAR
+  CLEAR_WITH_NOTES
+  RETURNED
+  REJECTED
+  APPROVED
+  PENDING
+}
+
+model GateDecision {
+  id           String      @id @default(cuid())
+  submissionId String
+  gate         Int
+  verdict      GateVerdict
+  comment      String?
+  ruleResults  Json        @default("[]") // snapshot: [{code,severity,passed,note}]
+  actorId      String
+  decidedAt    DateTime    @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id])
+  actor      User       @relation("GateDecisionActor", fields: [actorId], references: [id])
+
+  @@index([submissionId])
+}
+
+enum Lane {
+  TAX
+  LEGAL
+  HRD_GA
+  ACCOUNTING
+}
+
+enum LaneStatus {
+  TERVERIFIKASI
+  PERLU_REVISI
+  MENUNGGU
+  TIDAK_DIPERLUKAN
+}
+
+model LaneClearance {
+  id           String     @id @default(cuid())
+  submissionId String
+  lane         Lane
+  status       LaneStatus @default(MENUNGGU)
+  note         String?
+  updatedById  String?
+  updatedAt    DateTime   @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id])
+  updatedBy  User?      @relation("LaneClearanceActor", fields: [updatedById], references: [id])
+
+  @@unique([submissionId, lane])
+}
+
+model SignatureColumn {
+  id           String  @id @default(cuid())
+  submissionId String
+  gate         Int
+  role         String
+  jabatan      String?
+  name         String?
+  order        Int
+  active       Boolean @default(true)
+  isManual     Boolean @default(false)
+
+  submission Submission @relation(fields: [submissionId], references: [id])
+
+  @@index([submissionId])
+}
+
+model EmailApprovalLink {
+  id           String       @id @default(cuid())
+  submissionId String
+  gate         Int
+  token        String       @unique
+  expiresAt    DateTime
+  usedAt       DateTime?
+  decision     GateVerdict?
+  decidedById  String?
+
+  submission Submission @relation(fields: [submissionId], references: [id])
+  decidedBy  User?      @relation("EmailApprovalDecidedBy", fields: [decidedById], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// Contracts / Commitments (Registri Commitment)
+// ---------------------------------------------------------------------------
+
+enum ContractKind {
+  KONTRAK
+  LOA
+  ADENDUM
+  PO
+}
+
+enum ContractStatus {
+  AKTIF
+  SELESAI
+  DIPUTUS
+  KEDALUWARSA
+}
+
+model Contract {
+  id               String         @id @default(cuid())
+  instrumentNo     String         @unique
+  kind             ContractKind
+  vendorId         String
+  companyId        String
+  projectId        String
+  costCode         String
+  value            Decimal        @db.Decimal(18, 2)
+  currency         String         @default("IDR")
+  startDate        DateTime?
+  endDate          DateTime?
+  dpPct            Decimal        @default(0) @db.Decimal(5, 2)
+  retensiPct       Decimal        @default(0) @db.Decimal(5, 2)
+  status           ContractStatus @default(AKTIF)
+  tagLevel         TagLevel       @default(INFO)
+  parentContractId String? // for adendum -> original contract
+
+  extra Json @default("{}") // full KONTRAK_FORM detail (legal/signer/jaminan fields)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor         Vendor     @relation(fields: [vendorId], references: [id])
+  company        Company    @relation(fields: [companyId], references: [id])
+  project        Project    @relation(fields: [projectId], references: [id])
+  parentContract Contract?  @relation("Adendum", fields: [parentContractId], references: [id])
+  adendums       Contract[] @relation("Adendum")
+
+  paymentSchedules PaymentSchedule[]
+  guarantees       Guarantee[]
+  submissions      Submission[]
+  payments         Payment[]
+
+  @@index([companyId, projectId])
+}
+
+enum PaymentScheduleStatus {
+  PAID
+  OPEN
+  PLAN
+}
+
+model PaymentSchedule {
+  id         String                @id @default(cuid())
+  contractId String
+  label      String
+  amount     Decimal               @db.Decimal(18, 2)
+  status     PaymentScheduleStatus @default(PLAN)
+  paidAt     DateTime?
+
+  contract Contract @relation(fields: [contractId], references: [id])
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  submissionId String?
+  contractId   String?
+  gross        Decimal  @db.Decimal(18, 2)
+  recoupDp     Decimal  @default(0) @db.Decimal(18, 2)
+  retensi      Decimal  @default(0) @db.Decimal(18, 2)
+  denda        Decimal  @default(0) @db.Decimal(18, 2)
+  pph          Decimal  @default(0) @db.Decimal(18, 2)
+  ppn          Decimal  @default(0) @db.Decimal(18, 2)
+  netto        Decimal  @db.Decimal(18, 2)
+  paidAt       DateTime @default(now())
+
+  submission Submission? @relation(fields: [submissionId], references: [id])
+  contract   Contract?   @relation(fields: [contractId], references: [id])
+}
+
+enum GuaranteeKind {
+  UANG_MUKA
+  PELAKSANAAN
+  PEMELIHARAAN
+}
+
+model Guarantee {
+  id         String        @id @default(cuid())
+  contractId String
+  kind       GuaranteeKind
+  number     String
+  expiresAt  DateTime
+  status     TagLevel      @default(INFO)
+
+  contract Contract @relation(fields: [contractId], references: [id])
+
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Settings / Parameters — proposal -> approval engine
+// ---------------------------------------------------------------------------
+
+enum ParamUnit {
+  RP
+  PCT
+  WD // working days
+  CD // calendar days
+  MIN
+  CYCLE
+  TEXT
+}
+
+enum ParamGroup {
+  TINGKAT_KEWENANGAN
+  TARIF_PAJAK
+  AMBANG_KONTRAK
+  AMBANG_DEVIASI
+  SLA_MASA_BERLAKU
+}
+
+model ParameterDefinition {
+  id             String     @id // stable slug, e.g. "tingkat-1"
+  label          String
+  group          ParamGroup
+  unit           ParamUnit
+  min            Decimal?   @db.Decimal(18, 4)
+  max            Decimal?   @db.Decimal(18, 4)
+  ascendingGroup String? // rows sharing this key must be strictly increasing
+  ownerRole      Role // who may propose a change
+  ruleId         String?
+  sampleValue    String
+  sortOrder      Int        @default(0)
+
+  value     ParameterValue?
+  proposals ParameterProposal[]
+  history   ParameterHistory[]
+}
+
+model ParameterValue {
+  parameterId   String   @id
+  currentValue  String
+  effectiveDate DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  parameter ParameterDefinition @relation(fields: [parameterId], references: [id])
+}
+
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ParameterProposal {
+  id                    String         @id @default(cuid())
+  parameterId           String
+  proposedValue         String
+  proposedEffectiveDate DateTime
+  approverRole          Role // CFO or CEO1, computed from value at proposal time
+  status                ProposalStatus @default(PENDING)
+  reason                String?
+  proposedById          String
+  proposedAt            DateTime       @default(now())
+  decidedById           String?
+  decidedAt             DateTime?
+  decidedEffectiveDate  DateTime?
+  decisionReason        String?
+
+  parameter  ParameterDefinition @relation(fields: [parameterId], references: [id])
+  proposedBy User                @relation("ProposalBy", fields: [proposedById], references: [id])
+  decidedBy  User?               @relation("ProposalDecidedBy", fields: [decidedById], references: [id])
+
+  @@index([parameterId, status])
+}
+
+enum ParamHistoryKind {
+  PROPOSED
+  APPROVED
+  REJECTED
+  PERUBAHAN_LANGSUNG
+  DIKEMBALIKAN
+}
+
+model ParameterHistory {
+  id            String           @id @default(cuid())
+  parameterId   String
+  kind          ParamHistoryKind
+  fromValue     String?
+  toValue       String?
+  byId          String
+  effectiveDate DateTime?
+  reason        String?
+  at            DateTime         @default(now())
+
+  parameter ParameterDefinition @relation(fields: [parameterId], references: [id])
+  by        User                @relation("HistoryBy", fields: [byId], references: [id])
+
+  @@index([parameterId])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications & append-only activity log
+// ---------------------------------------------------------------------------
+
+enum NotifCategory {
+  SLA
+  STATUS
+  UMUR
+  TAUTAN
+}
+
+model Notification {
+  id           String        @id @default(cuid())
+  category     NotifCategory
+  title        String
+  body         String
+  submissionId String?
+  tagLevel     TagLevel      @default(INFO)
+  toUserId     String?
+  toRole       Role?
+  readAt       DateTime?
+  createdAt    DateTime      @default(now())
+
+  submission Submission? @relation(fields: [submissionId], references: [id])
+  toUser     User?       @relation("NotificationTo", fields: [toUserId], references: [id])
+
+  @@index([toUserId, readAt])
+  @@index([toRole, readAt])
+}
+
+model ActivityLog {
+  id           String   @id @default(cuid())
+  at           DateTime @default(now())
+  action       String
+  note         String?
+  userId       String
+  submissionId String?
+
+  user       User        @relation("ActivityLogUser", fields: [userId], references: [id])
+  submission Submission? @relation(fields: [submissionId], references: [id])
+
+  @@index([at])
+}
